@@ -1,0 +1,29 @@
+# Задание средней сложности № 6: настройка flake8.
+#
+# flake8 не читает pyproject.toml, поэтому его настройки — в этом файле.
+# Запуск: poetry run flake8
+# Плагины (dev-зависимости Poetry):
+#   flake8-docstrings — наличие и оформление документации (коды D),
+#   pep8-naming       — имена классов, функций, переменных (коды N).
+[flake8]
+# Длина строки по PEP 8.
+max-line-length = 79
+
+# Цикломатическая сложность функции (плагин mccabe, код C901):
+# слишком разветвлённую функцию нужно разбить на части.
+max-complexity = 8
+
+# Стиль документации — PEP 257.
+docstring-convention = pep257
+
+# Каталоги, которые не проверяются (в дополнение к .git, __pycache__ и др.).
+extend-exclude =
+    .venv,
+    .pytest_cache,
+    build,
+    dist
+
+# Показывать строку с ошибкой и итоговую статистику по кодам.
+show-source = True
+statistics = True
+count = True
