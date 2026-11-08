@@ -11,6 +11,9 @@ dependencies = [
     "requests (>=2.31,<3.0)"
 ]
 
+[project.scripts]
+currency = "currency_cli.cli:main"
+
 [tool.poetry]
 packages = [{include = "currency_cli", from = "src"}]
 
