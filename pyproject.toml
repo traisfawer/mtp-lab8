@@ -1,0 +1,32 @@
+[project]
+name = "currency-cli"
+version = "1.0.0"
+description = "Консольная утилита курсов валют ЦБ РФ (ЛР8, вариант 6)"
+authors = [
+    {name = "Денис Ефимов"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests (>=2.31,<3.0)"
+]
+
+[tool.poetry]
+packages = [{include = "currency_cli", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=8.0,<10.0)",
+    "flake8 (>=7.0,<8.0)",
+    "flake8-docstrings (>=1.7,<2.0)",
+    "pep8-naming (>=0.14,<1.0)"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
