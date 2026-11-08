@@ -22,6 +22,7 @@ from currency_cli.models import BASE_CURRENCY
 
 MAX_LOOKBACK = 10
 MAX_HISTORY_DAYS = 31
+MAX_AMOUNT = Decimal("1e15")
 CENT = Decimal("0.01")
 
 log = logging.getLogger(__name__)
@@ -113,7 +114,10 @@ class RateService:
         else:
             raise ServiceError(f"Не найдено курсов за {self.max_lookback} "
                                f"дней до {day:%d.%m.%Y}")
-        self.repository.alias(day, table.day)
+        if day <= self.today():
+            # Для прошедших дней (и сегодня) курсы окончательные. Курсы
+            # на завтра ЦБ может опубликовать позже — их не запоминаем.
+            self.repository.alias(day, table.day)
         return table
 
     @staticmethod
@@ -130,6 +134,8 @@ class RateService:
         """Пересчитать amount из валюты source в валюту target."""
         if amount <= 0:
             raise ServiceError("Сумма должна быть больше нуля")
+        if amount > MAX_AMOUNT:
+            raise ServiceError("Слишком большая сумма (не больше 10^15)")
         table = self.get_rates(day)
         source_rate = self.find_rate(table, source)
         target_rate = self.find_rate(table, target)

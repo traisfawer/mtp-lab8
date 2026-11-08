@@ -5,14 +5,15 @@
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
 
 from currency_cli.data import ApiError, InMemoryRateRepository
 from currency_cli.services import RateService, ServiceError, UnknownCurrency
-from fakes import FRIDAY, SATURDAY, SUNDAY, FakeClient, friday_table
+from fakes import (FRIDAY, SATURDAY, SUNDAY, FakeClient, friday_table,
+                   saturday_table)
 
 
 def test_current_rates_cached_for_today(service, client):
@@ -175,3 +176,20 @@ def test_top_changes(service):
 def test_today_from_clock(service):
     """Дата сервиса берётся из переданных часов."""
     assert service.today() == date(2026, 10, 11)
+
+
+def test_tomorrow_published_later(clock):
+    """Курс на завтра, опубликованный днём, виден в тот же день."""
+    clock.now = datetime(2026, 10, 9, 10, 0)
+    client = FakeClient([friday_table()], current=friday_table())
+    service = RateService(InMemoryRateRepository(), client, clock)
+    assert service.get_rates(SATURDAY).day == FRIDAY
+    client.tables[SATURDAY] = saturday_table()
+    assert service.get_rates(SATURDAY).day == SATURDAY
+
+
+def test_convert_too_large(service):
+    """Слишком большая сумма — понятная ошибка, а не сбой Decimal."""
+    with pytest.raises(ServiceError, match="Слишком большая"):
+        service.convert(Decimal("1e30"), "USD")
+    assert service.convert(Decimal("1e15"), "USD", "KZT").result > 0

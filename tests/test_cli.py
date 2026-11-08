@@ -188,3 +188,10 @@ def test_python_m_entry_point():
                             encoding="utf-8", env=env, check=False)
     assert result.returncode == 0
     assert result.stdout.strip() == f"currency {__version__}"
+
+
+def test_amount_too_large():
+    """Сумма больше 10^15 отклоняется ещё при разборе аргументов."""
+    assert positive_amount("1e15") == Decimal("1e15")
+    with pytest.raises(argparse.ArgumentTypeError, match="слишком большая"):
+        positive_amount("1e30")

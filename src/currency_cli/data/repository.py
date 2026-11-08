@@ -60,6 +60,7 @@ class InMemoryRateRepository(RateRepository):
     def save(self, table, fetched_at=None):
         """Сохранить таблицу (fetched_at — время загрузки текущих курсов)."""
         self._tables[table.day] = table
+        self._aliases.pop(table.day, None)
         if fetched_at is not None or table.day not in self._fetched:
             self._fetched[table.day] = fetched_at
 
@@ -71,8 +72,11 @@ class InMemoryRateRepository(RateRepository):
             self._aliases[requested] = day
 
     def get(self, day):
-        """Таблица на дату day (с учётом псевдонимов) или None."""
-        return self._tables.get(self._aliases.get(day, day))
+        """Таблица на дату day или по псевдониму; своя таблица важнее."""
+        if day in self._tables:
+            return self._tables[day]
+        alias = self._aliases.get(day)
+        return None if alias is None else self._tables[alias]
 
     def latest(self):
         """Пара (самая свежая таблица, fetched_at или None) или None."""
@@ -136,7 +140,8 @@ class SqliteRateRepository(RateRepository):
         """Сохранить таблицу (fetched_at — время загрузки текущих курсов).
 
         Повторное сохранение той же даты заменяет курсы, но не удаляет
-        псевдонимы дат и не стирает уже известное время загрузки.
+        псевдонимы, ведущие на эту дату, и не стирает уже известное время
+        загрузки. Псевдоним самой даты удаляется: своя таблица важнее.
         """
         day = table.day.isoformat()
         fetched = (None if fetched_at is None
@@ -147,6 +152,8 @@ class SqliteRateRepository(RateRepository):
                 "ON CONFLICT (day) DO UPDATE SET fetched_at = "
                 "COALESCE(excluded.fetched_at, tables.fetched_at)",
                 (day, fetched))
+            self.conn.execute("DELETE FROM aliases WHERE requested = ?",
+                              (day,))
             self.conn.execute("DELETE FROM rates WHERE day = ?", (day,))
             self.conn.executemany(
                 "INSERT INTO rates (day, code, name, nominal, value, "
@@ -178,11 +185,14 @@ class SqliteRateRepository(RateRepository):
         return RateTable(date.fromisoformat(day), rates)
 
     def get(self, day):
-        """Таблица на дату day (с учётом псевдонимов) или None."""
-        row = self.conn.execute(
-            "SELECT t.day FROM tables AS t WHERE t.day = :day "
-            "UNION SELECT a.day FROM aliases AS a WHERE a.requested = :day",
-            {"day": day.isoformat()}).fetchone()
+        """Таблица на дату day или по псевдониму; своя таблица важнее."""
+        key = day.isoformat()
+        row = self.conn.execute("SELECT day FROM tables WHERE day = ?",
+                                (key,)).fetchone()
+        if row is None:
+            row = self.conn.execute(
+                "SELECT day FROM aliases WHERE requested = ?",
+                (key,)).fetchone()
         return None if row is None else self._load(row[0])
 
     def latest(self):

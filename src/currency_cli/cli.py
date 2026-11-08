@@ -23,7 +23,7 @@ from pathlib import Path
 
 from currency_cli import __version__
 from currency_cli.data import CbrClient, SqliteRateRepository
-from currency_cli.services import ServiceError, RateService
+from currency_cli.services import MAX_AMOUNT, RateService, ServiceError
 
 DEFAULT_DB = Path.home() / ".currency-cli" / "rates.db"
 
@@ -37,6 +37,9 @@ def positive_amount(text):
             f"«{text}» — не число") from None
     if not value.is_finite() or value <= 0:
         raise argparse.ArgumentTypeError("сумма должна быть больше нуля")
+    if value > MAX_AMOUNT:
+        raise argparse.ArgumentTypeError("слишком большая сумма "
+                                         "(не больше 10^15)")
     return value
 
 

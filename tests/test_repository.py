@@ -104,3 +104,11 @@ def test_sqlite_file_persists(tmp_path):
     assert second.get(SUNDAY) == saturday_table()
     assert second.latest() == (saturday_table(), FETCHED)
     second.close()
+
+
+def test_own_table_wins_over_alias(repository):
+    """Если на дату появилась своя таблица, псевдоним больше не нужен."""
+    repository.save(friday_table())
+    repository.alias(SATURDAY, FRIDAY)
+    repository.save(saturday_table())
+    assert repository.get(SATURDAY) == saturday_table()
